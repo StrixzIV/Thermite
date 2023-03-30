@@ -1,3 +1,16 @@
+use std::net::TcpListener;
+
+
 fn main() {
-    println!("Hello, world!");
+    
+    let port: u16 = 8080;
+    let listener = TcpListener::bind(format!("{}", port)).unwrap();
+
+    for stream in listener.incoming() {
+
+        let stream = stream.unwrap();
+        println!("Connection established.");
+
+    }
+
 }
