@@ -2,9 +2,18 @@ use std::fs;
 use std::io::prelude::*;
 use std::net::{ TcpListener, TcpStream };
 
+use clap::Parser;
+
 struct HTTPRequest<'a> {
     method: &'a str,
     path: &'a str
+}
+
+#[derive(Parser)]
+#[clap(author = "Jirayu Kaewsing", version, about)]
+struct Args {
+    #[clap(short, long)]
+    port: Option<u16>
 }
 
 fn handle_connection(mut stream: TcpStream) {
@@ -42,8 +51,10 @@ fn handle_connection(mut stream: TcpStream) {
 }
 
 fn main() {
+
+    let args = Args::parse();
     
-    let port: u16 = 8080;
+    let port: u16 = args.port.unwrap_or(8080);
     let listener = TcpListener::bind(format!("localhost:{}", port)).unwrap();
 
     for stream in listener.incoming() {
