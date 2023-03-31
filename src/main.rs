@@ -18,12 +18,15 @@ fn handle_connection(mut stream: TcpStream) {
     
     let req = HTTPRequest {
         method: request.split(" ").collect::<Vec<&str>>()[0].trim(),
-        path: request.split(" ").collect::<Vec<&str>>()[1].trim()
+        path: request.split(" ").collect::<Vec<&str>>()[1].strip_prefix("/").unwrap()
     };
 
     println!("{}", format!("Request: {}, Path: {}", req.method, req.path));
 
-    let (status, filename) = if req.method == "GET" && req.path == "/" {("HTTP/1.1 200 OK", "index.html")} else {("HTTP/1.1 404 NOT FOUND", "404.html")};
+    let (filename, status) = match req.path {
+        "" | "index.html" => ("index.html", "HTTP/1.1 200 OK"),
+        _ => ("404.html", "HTTP/1.1 404 NOT FOUND")
+    };
 
     let contents = fs::read_to_string(format!("resources/{filename}")).unwrap();
     let response = format!(
