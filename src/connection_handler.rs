@@ -1,5 +1,6 @@
-use std::fs;
-use std::path::Path;
+use std::time::Duration;
+use std::{fs, thread};
+use std::path::{Path, PathBuf};
 use std::io::prelude::*;
 use std::net::TcpStream;
 
@@ -8,7 +9,7 @@ struct HTTPRequest<'a> {
     endpoint: &'a str
 }
 
-pub fn handle_connection(mut stream: TcpStream, source_path: &Path) {
+pub fn handle_connection(mut stream: TcpStream, source_path: &PathBuf) {
 
     let mut buffer = [0; 1024];
     
@@ -26,6 +27,10 @@ pub fn handle_connection(mut stream: TcpStream, source_path: &Path) {
     
     let (filename, status) = match req.endpoint {
         "" | "index.html" => ("index.html", "HTTP/1.1 200 OK"),
+        "sleep"  => {
+            thread::sleep(Duration::from_secs(5));
+            ("sleep.html", "HTTP/1.1 200 OK")
+        },
         _ => ("404.html", "HTTP/1.1 404 NOT FOUND")
     };
 

@@ -1,9 +1,12 @@
-use std::path::PathBuf;
 use clap::Parser;
+use std::path::PathBuf;
 use std::net::TcpListener;
 
 mod connection_handler;
+mod utils;
+
 use connection_handler::handle_connection;
+use utils::ThreadPool;
 
 #[derive(Parser)]
 #[clap(author = "Jirayu Kaewsing", version, about)]
@@ -19,10 +22,17 @@ fn main() {
     
     let port: u16 = args.port.unwrap_or(8080);
     let listener = TcpListener::bind(format!("localhost:{}", port)).unwrap();
+    let thread_pool = ThreadPool::new(4);
 
     for stream in listener.incoming() {
+
         let stream = stream.unwrap();
-        handle_connection(stream, args.source_path.clone().as_path());
+        let path = args.source_path.clone();
+
+        thread_pool.execute(move || {
+            handle_connection(stream, &path);
+        });
+
     }
 
 }
