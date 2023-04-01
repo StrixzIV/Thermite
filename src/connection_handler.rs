@@ -1,13 +1,14 @@
 use std::fs;
+use std::path::Path;
 use std::io::prelude::*;
 use std::net::TcpStream;
 
 struct HTTPRequest<'a> {
     method: &'a str,
-    path: &'a str
+    endpoint: &'a str
 }
 
-pub fn handle_connection(mut stream: TcpStream) {
+pub fn handle_connection(mut stream: TcpStream, source_path: &Path) {
 
     let mut buffer = [0; 1024];
     
@@ -18,17 +19,17 @@ pub fn handle_connection(mut stream: TcpStream) {
     
     let req = HTTPRequest {
         method: request.split(" ").collect::<Vec<&str>>()[0].trim(),
-        path: request.split(" ").collect::<Vec<&str>>()[1].strip_prefix("/").unwrap()
+        endpoint: request.split(" ").collect::<Vec<&str>>()[1].strip_prefix("/").unwrap()
     };
-
-    println!("{}", format!("Request: {}, Path: {}", req.method, req.path));
-
-    let (filename, status) = match req.path {
+    
+    println!("{}", format!("Request: {}, Path: {}", req.method, req.endpoint));
+    
+    let (filename, status) = match req.endpoint {
         "" | "index.html" => ("index.html", "HTTP/1.1 200 OK"),
         _ => ("404.html", "HTTP/1.1 404 NOT FOUND")
     };
 
-    let contents = fs::read_to_string(format!("resources/{filename}")).unwrap();
+    let contents = fs::read_to_string(source_path.join(filename)).unwrap();
     let response = format!(
         "{}\r\nContent-Length: {}\r\n\r\n{}",
         status,
