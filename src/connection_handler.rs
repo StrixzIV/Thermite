@@ -1,6 +1,6 @@
 use std::time::Duration;
 use std::{fs, thread};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::io::prelude::*;
 use std::net::TcpStream;
 
