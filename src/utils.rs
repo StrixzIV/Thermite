@@ -2,14 +2,19 @@ use std::{thread, sync::{mpsc, Arc, Mutex}};
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
+enum ThreadSignal {
+    New(Job),
+    Terminate
+}
+
 struct Worker {
     id: usize,
-    thread: thread::JoinHandle<()>,
+    thread: Option<thread::JoinHandle<()>>
 }
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
-    sender: mpsc::Sender<Job>
+    sender: mpsc::Sender<ThreadSignal>
 }
 
 impl ThreadPool {
@@ -46,7 +51,33 @@ impl ThreadPool {
         F: FnOnce() + Send + 'static 
     {
         let job = Box::new(f);
-        self.sender.send(job).unwrap();
+        self.sender.send(ThreadSignal::New(job)).unwrap();
+    }
+
+}
+
+impl Drop for ThreadPool {
+
+    fn drop(&mut self) {
+
+        println!("Sending terminate signal to all workers...");
+
+        for _ in &self.workers {
+            self.sender.send(ThreadSignal::Terminate).unwrap();
+        }
+
+        println!("Shutting down all workers...");
+        
+        for worker in &mut self.workers {
+
+            println!("Shutting down worker #{}", worker.id);
+
+            if let Some(thread) = worker.thread.take() {
+                thread.join().unwrap();
+            }
+
+        }
+
     }
 
 }
@@ -54,18 +85,29 @@ impl ThreadPool {
 
 impl Worker {
     
-    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
+    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<ThreadSignal>>>) -> Worker {
 
         let thread = thread::spawn(move || loop {
 
-            let job = receiver.lock().unwrap().recv().unwrap();
+            let signal = receiver.lock().unwrap().recv().unwrap();
 
-            println!("Worker #{} got a job. Executing...", id);
-            job();
+            match signal {
+                
+                ThreadSignal::New(job) => {
+                    println!("Worker #{} got a job. Executing...", id);
+                    job();
+                },
+                
+                ThreadSignal::Terminate => {
+                    println!("Worker #{} getting terminate signal.", id);
+                    break;
+                }
+
+            }
 
         });
 
-        Worker { id, thread }
+        Worker { id, thread: Some(thread) }
     
     }
 
